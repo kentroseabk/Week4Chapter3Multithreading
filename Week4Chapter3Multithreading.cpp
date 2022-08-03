@@ -76,6 +76,12 @@ void UpdateCharacter()
     }
 }
 
+/*
+    I added a timer to check how long it takes threads to finish. 
+    This takes away from the purpose of threads since I'm waiting for them to finish 
+    but I wanted to make sure that 5 threads running w/ each having a sleep time of 
+    5 seconds would take just about 5 seconds total for all to finish.
+*/
 void CheckThreadTime()
 {
     while (threadsComplete < NUMBER_OF_THREADS) { }
