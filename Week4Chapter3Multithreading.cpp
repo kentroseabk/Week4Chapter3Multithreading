@@ -29,7 +29,14 @@ using namespace std;
 
 bool DidQuit = false;
 bool ShouldDecrementLives = false;
-const int SLEEP_TIME = 5000;
+
+constexpr int SLEEP_TIME = 1000;
+constexpr int NUMBER_OF_THREADS = 5;
+
+uint32_t startTime;
+uint32_t endTime;
+
+int threadsComplete;
 
 struct Character
 {
@@ -45,11 +52,17 @@ struct Character
 
 Character player;
 
+uint32_t GetTime()
+{
+    using namespace std::chrono;
+    return static_cast<uint32_t>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
+}
+
 void UpdateCharacter()
 {
-    //while (!DidQuit)
+    while (!DidQuit)
     {
-        //if (ShouldDecrementLives)
+        if (ShouldDecrementLives)
         {
             if (player.lives > 0)
             {
@@ -57,8 +70,20 @@ void UpdateCharacter()
                 //std::this_thread::yield();
                 --player.lives;
             }
+
+            threadsComplete++;
         }
     }
+}
+
+void CheckThreadTime()
+{
+    while (threadsComplete < NUMBER_OF_THREADS) { }
+
+    endTime = GetTime();
+
+    cout << "Created " << NUMBER_OF_THREADS << " threads, each w/ a sleep time of " << SLEEP_TIME / (float)1000 << " second/s." << endl;
+    cout << "Total time: " << (endTime - startTime) / (float)1000 << " seconds." << endl;
 }
 
 void ProcessInput()
@@ -76,6 +101,9 @@ void ProcessInput()
         {
         case 'a':
             ShouldDecrementLives = true;
+            threadsComplete = 0;
+            startTime = GetTime();
+            CheckThreadTime();
             break;
         case 'd':
             player.DisplayStats();
@@ -105,37 +133,17 @@ void JoinUpdateThreads(thread characterUpdateThreads[], const int numberOfUpdate
     }
 }
 
-uint32_t GetTime()
-{
-    using namespace std::chrono;
-    return static_cast<uint32_t>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
-}
-
 int main()
 {
-    uint32_t start = GetTime();
+    thread characterUpdateThreads[NUMBER_OF_THREADS];
 
-    constexpr int numberOfUpdateThreads = 5;
+    thread inputHandler(ProcessInput);
 
-    thread characterUpdateThreads[numberOfUpdateThreads];
+    CreateUpdateThreads(characterUpdateThreads, NUMBER_OF_THREADS);
 
-    //thread inputHandler(ProcessInput);
+    inputHandler.join();
 
-    player.DisplayStats();
-
-    CreateUpdateThreads(characterUpdateThreads, numberOfUpdateThreads);
-
-    //inputHandler.join();
-    cout << "Pre-JoinUpdateThreads" << endl;
-    JoinUpdateThreads(characterUpdateThreads, numberOfUpdateThreads);
-    cout << "Post-JoinUpdateThreads" << endl;
-
-    player.DisplayStats();
-
-    uint32_t end = GetTime();
-
-    cout << "Created " << numberOfUpdateThreads << " threads, each w/ a sleep time of " << SLEEP_TIME / (float)1000 << " second/s." << endl;
-    cout << "Total time: " << (end - start) / (float)1000 << " seconds.";
+    JoinUpdateThreads(characterUpdateThreads, NUMBER_OF_THREADS);
 
     return 0;
 }
